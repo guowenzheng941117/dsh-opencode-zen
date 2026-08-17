@@ -21,12 +21,12 @@ The conversation you're reading right now is powered by this plugin: **DeepSeek 
 
 | Model | Context window | Notes |
 |---|---|---|
-| `deepseek-v4-flash-free` | 200,000 | DeepSeek V4 Flash · reasoning + tool calls, daily driver |
-| `mimo-v2.5-free` | 200,000 | Xiaomi MiMo 2.5 |
-| `hy3-free` | 200,000 | Tencent Hunyuan |
+| `deepseek-v4-flash-free` | 200k | DeepSeek V4 Flash · reasoning + tool calls, daily driver |
+| `mimo-v2.5-free` | 200k | Xiaomi MiMo 2.5 |
+| `hy3-free` | 200k | Tencent Hunyuan |
 | `nemotron-3-ultra-free` | 131,072 | NVIDIA Nemotron 3 Ultra |
 | `nemotron-3.5-lightning-free` | 131,072 | NVIDIA Nemotron 3.5 Lightning |
-| `laguna-s-2.1-free` | 200,000 | Laguna S 2.1 |
+| `laguna-s-2.1-free` | 200k | Laguna S 2.1 |
 
 Reasoning effort: `off` / `low` / `high` (default) / `max`.
 
