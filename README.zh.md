@@ -21,12 +21,12 @@
 
 | 模型 | 上下文窗口 | 备注 |
 |---|---|---|
-| `deepseek-v4-flash-free` | 200,000 | DeepSeek V4 Flash · 推理 + 工具调用，日常主力 |
-| `mimo-v2.5-free` | 200,000 | 小米 MiMo 2.5 |
-| `hy3-free` | 200,000 | 腾讯混元 |
+| `deepseek-v4-flash-free` | 200k | DeepSeek V4 Flash · 推理 + 工具调用，日常主力 |
+| `mimo-v2.5-free` | 200k | 小米 MiMo 2.5 |
+| `hy3-free` | 200k | 腾讯混元 |
 | `nemotron-3-ultra-free` | 131,072 | NVIDIA Nemotron 3 Ultra |
 | `nemotron-3.5-lightning-free` | 131,072 | NVIDIA Nemotron 3.5 Lightning |
-| `laguna-s-2.1-free` | 200,000 | Laguna S 2.1 |
+| `laguna-s-2.1-free` | 200k | Laguna S 2.1 |
 
 推理强度：`off` / `low` / `high`（默认）/ `max`，想要多快或多深随你调。
 
