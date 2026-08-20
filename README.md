@@ -52,6 +52,20 @@ Set `OPENCODE_ZEN_API_KEY` or `OPENCODE_GO_API_KEY` before starting `dsh web`.
 
 Nothing configured? It falls back to the official public tier (`public`).
 
+## Troubleshooting
+
+**Q: Model returns 429 Too Many Requests?**
+A: The free tier has per-IP rate limits. Wait 30–60 seconds, or install [dsh-api-key-pool](https://github.com/xiaozhe7772222/dsh-api-key-pool) to rotate across multiple keys automatically.
+
+**Q: `opencode` provider doesn't appear in model selector?**
+A: Restart `dsh web` fully (not just refresh). Verify installation with `dsh plugin --profile web list`.
+
+**Q: Which DSH versions are supported?**
+A: DSH 0.8.0+ with the `ctx.llm.registerAdapter` API. Older versions may need manual route registration.
+
+**Q: Are these models really free forever?**
+A: They use OpenCode Zen's official public free tier. Service availability and quota limits are subject to OpenCode Zen's policies — this plugin is just a client adapter.
+
 ## How it works
 
 Registers an `opencode` LLM provider route via `ctx.llm.registerAdapter(['opencode'], adapter)`, exposing the OpenCode Zen free models to session models and sub-agents alike.

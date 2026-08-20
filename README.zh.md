@@ -52,6 +52,20 @@ dsh plugin --profile web add github:xiaozhe7772222/dsh-opencode-zen
 
 什么都不配也行——插件最终兜底到官方公开档 `public`。
 
+## 常见问题
+
+**Q: 模型返回 429 Too Many Requests 怎么办？**
+A: 免费档有按 IP 的速率限制。等 30–60 秒再试，或者安装 [dsh-api-key-pool](https://github.com/xiaozhe7772222/dsh-api-key-pool) 自动轮换多个 Key。
+
+**Q: 模型选择器里没有 `opencode` 提供器？**
+A: 完全重启 `dsh web`（不是只刷新页面）。用 `dsh plugin --profile web list` 确认插件已安装。
+
+**Q: 支持哪些 DSH 版本？**
+A: DSH 0.8.0+（需要 `ctx.llm.registerAdapter` API）。旧版本可能需要手动注册路由。
+
+**Q: 这些模型真的永久免费吗？**
+A: 使用的是 OpenCode Zen 官方公开免费档。服务可用性和额度限制以 OpenCode Zen 官方政策为准——本插件只是一个客户端适配器。
+
 ## 原理
 
 通过 `ctx.llm.registerAdapter(['opencode'], adapter)` 注册 LLM 提供器路由，把 OpenCode Zen 免费模型挂进 DSH 模型体系，会话模型、子代理都能用。
