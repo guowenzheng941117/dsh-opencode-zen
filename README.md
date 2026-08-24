@@ -15,7 +15,7 @@ The conversation you're reading right now is powered by this plugin: **Ox Alpha 
 - ⚡ **Install & go** — restart `dsh web` and the `opencode` route appears in the model selector; no configuration needed.
 - 🔑 **Stack quotas** — pairs with dsh-api-key-pool for round-robin rotation across multiple free accounts, automatically.
 - 🛡️ **Quota-aware** — built-in 429/5xx backoff and request throttling so you never blow through the free quota.
-- 🔁 **Cut-stream self-healing** — the free-tier gateway sometimes kills long generations mid-thought (no error, no answer); the plugin detects the silent cutoff and auto-resumes after progressively longer waits, seamlessly continuing the same reasoning block.
+- 🔁 **Cut-stream self-healing** — the free-tier gateway sometimes kills long generations mid-stream (no error, no answer): thinking/text cuts auto-resume after progressively longer waits, seamlessly continuing the same reasoning block; cut tool-call arguments get quarantined into valid placeholders (the host sees a clear validation error instead of silent failure) and the turn is retried in full.
 - 🧠 **Full parity** — streaming, reasoning-content passthrough, and tool calls, same experience as paid models.
 
 ## Models (as configured in `models.json`)
