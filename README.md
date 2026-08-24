@@ -22,7 +22,7 @@ The conversation you're reading right now is powered by this plugin: **Ox Alpha 
 
 | Model | Context window | Reasoning efforts | Notes |
 |---|---|---|---|
-| `x-preview-f-free` | 1M | low / high (default) / max | Ox Alpha · zero retention, no training; daily driver |
+| `x-preview-f-free` | 1M | low / high (default) / max | Ox Alpha · zero retention, no training, image input supported; daily driver |
 | `hy3-free` | 190k | low / high (default) | Tencent Hunyuan Hy3 |
 | `mimo-v2.5-free` | 200k | no explicit control | Xiaomi MiMo 2.5 |
 

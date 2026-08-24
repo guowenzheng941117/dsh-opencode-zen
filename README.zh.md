@@ -22,7 +22,7 @@
 
 | 模型 | 上下文窗口 | 推理档位 | 备注 |
 |---|---|---|---|
-| `x-preview-f-free` | 1M | low / high（默认）/ max | Ox Alpha · 零保留、不训练，日常主力 |
+| `x-preview-f-free` | 1M | low / high（默认）/ max | Ox Alpha · 零保留、不训练，支持图片输入，日常主力 |
 | `hy3-free` | 190k | low / high（默认） | 腾讯混元 Hy3 |
 | `mimo-v2.5-free` | 200k | 不支持显式控制 | 小米 MiMo 2.5 |
 
