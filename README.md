@@ -16,6 +16,7 @@ The conversation you're reading right now is powered by this plugin: **Ox Alpha 
 - 🔑 **Stack quotas** — pairs with dsh-api-key-pool for round-robin rotation across multiple free accounts, automatically.
 - 🛡️ **Quota-aware** — built-in 429/5xx backoff and request throttling so you never blow through the free quota.
 - 🔁 **Cut-stream self-healing** — the free-tier gateway sometimes kills long generations mid-stream (no error, no answer): thinking/text cuts auto-resume after progressively longer waits, seamlessly continuing the same reasoning block; cut tool-call arguments get quarantined into valid placeholders (the host sees a clear validation error instead of silent failure) and the turn is retried in full.
+- 🖼️ **Resilient vision** — images never ride in your main request: each one is converted to a text description by an isolated, disposable side-request (fresh request on every retry, cached by content hash and reused across turns), so an unstable upstream vision endpoint can degrade a single picture to a placeholder but can never poison or kill your conversation.
 - 🧠 **Full parity** — streaming, reasoning-content passthrough, and tool calls, same experience as paid models.
 
 ## Models (as configured in `models.json`)
