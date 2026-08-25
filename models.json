@@ -1,7 +1,39 @@
 {
   "models": [
-    { "id": "x-preview-f-free", "name": "Ox Alpha Free", "contextWindow": 1000000, "description": "OpenCode Zen 免费档：隐身模型，零保留、不训练", "dataRisk": false, "reasoningEfforts": ["low", "high", "max"], "input": ["text", "image"] },
-    { "id": "hy3-free", "name": "Hunyuan 3 (Free)", "contextWindow": 190000, "description": "OpenCode Zen 免费档（腾讯混元 Hy3）", "dataRisk": true, "reasoningEfforts": ["low", "high"], "input": ["text", "image"] },
-    { "id": "mimo-v2.5-free", "name": "MiMo 2.5 (Free)", "contextWindow": 200000, "description": "OpenCode Zen 免费档（小米 MiMo 2.5）", "dataRisk": true, "reasoningEfforts": null, "input": ["text", "image"] }
+    {
+      "id": "x-preview-f-free",
+      "name": "Ox Alpha Free",
+      "contextWindow": 1000000,
+      "description": "OpenCode Zen 免费档：隐身模型，零保留、不训练",
+      "dataRisk": false,
+      "reasoningEfforts": [
+        "low",
+        "high",
+        "max"
+      ],
+      "input": [
+        "text",
+        "image"
+      ]
+    },
+    {
+      "id": "hy3-free",
+      "name": "Hunyuan 3 (Free)",
+      "contextWindow": 190000,
+      "description": "OpenCode Zen 免费档（腾讯混元 Hy3）",
+      "dataRisk": true,
+      "reasoningEfforts": [
+        "low",
+        "high"
+      ]
+    },
+    {
+      "id": "mimo-v2.5-free",
+      "name": "MiMo 2.5 (Free)",
+      "contextWindow": 200000,
+      "description": "OpenCode Zen 免费档（小米 MiMo 2.5）",
+      "dataRisk": true,
+      "reasoningEfforts": null
+    }
   ]
 }
