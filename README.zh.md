@@ -8,10 +8,10 @@
 
 ## 为什么用这个插件？
 
-你正在看的这段对话，就是由它驱动的：**Ox Alpha（`x-preview-f-free`），100 万上下文，免费额度，一分钱没花。**
+你正在看的这段对话，就是由它驱动的：**OpenCode Zen 免费档，零配置、零花费。**
 
 - 💰 **真免费** —— 官方免费档用字面量 key `public` 认证，不需要注册、不需要充值、不需要 API Key
-- 🧮 **3 个免费模型** —— Ox Alpha、腾讯混元 Hy3、小米 MiMo 2.5；清单外置在 `models.json`，可自行增删
+- 🧮 **实时免费清单** —— 可用免费模型在运行时从 OpenCode Zen 的 `/v1/models` 端点拉取（免登录即可），选择器永远反映当前实际提供的模型；`models.json` 仅作为元数据注释层
 - ⚡ **即装即用** —— 装完重启 `dsh web`，模型选择器里直接多出 `opencode` 路由，无需任何配置
 - 🔑 **额度叠加** —— 配合 dsh-api-key-pool 多 Key 轮换，多个免费账号额度自动叠加、自动切换
 - 🛡️ **额度友好** —— 内置 429/5xx 退避重试与请求节流，不会一把打爆免费额度
@@ -19,13 +19,26 @@
 - 🖼️ **识图不断链** —— 图片从不进入主请求：每张图经一次独立的一次性旁路请求换取文字描述（失败自动重派全新请求，按内容哈希缓存、每轮复用），上游视觉端点再不稳定也只是这张图降级为占位符，主会话永不被毒化
 - 🧠 **能力齐全** —— 流式输出、推理内容（reasoning）透传、工具调用，和付费模型体验一致
 
-## 模型列表（以 `models.json` 为准）
+## 模型列表（运行时实时发现）
 
-| 模型 | 上下文窗口 | 推理档位 | 备注 |
-|---|---|---|---|
-| `x-preview-f-free` | 1M | low / high（默认）/ max | Ox Alpha · 零保留、不训练，支持图片输入，日常主力 |
-| `hy3-free` | 190k | low / high（默认） | 腾讯混元 Hy3 |
-| `mimo-v2.5-free` | 200k | 不支持显式控制 | 小米 MiMo 2.5 |
+免费模型清单**不再写死** —— 从两个 API 源实时拉取并合并：
+
+- **可用性** = `https://opencode.ai/zen/v1/models`（OpenAI 兼容列表，免登录）。这是 zen 当前**实际在服务的**模型，只有能用的才会出现。
+- **规格** = `https://models.dev/api.json`（opencode 自身也在用的全量注册表），为每个模型带来**上下文窗口、输入模态（text/image/audio/pdf）、推理档位、工具调用支持**等完整参数。
+
+规格地图会缓存到磁盘（`~/.cache/dsh-opencode-zen/models-dev-specs.json`，TTL `DSH_ZEN_MODELS_TTL_MS`，默认 10 分钟），所以启动不会卡在那 ~4MB 的 models.dev 拉取。某源失败时逐级兜底：zen → models.dev 目录 → 静态 `models.json`。当前实时集合（可用性 ∩ 规格）：
+
+| 模型 | 备注 |
+|---|---|
+| `hy3-free` | 腾讯混元 Hy3 |
+| `deepseek-v4-flash-free` | DeepSeek V4 Flash · 推理 + 工具调用，日常主力 |
+| `mimo-v2.5-free` | 小米 MiMo 2.5 |
+| `muse-spark-1.2-contributor-free` | Muse Spark 1.2 Contributor |
+| `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra |
+| `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
+| `laguna-s-2.1-free` | Laguna S 2.1 |
+
+若实时拉取失败，插件回退到静态 `models.json`，选择器仍可离线工作。上游下架的模型自动消失，新上的模型无需更新插件即可出现。
 
 选择器统一提供 `off` / `low` / `high`（默认）/ `max` 四档；插件按各模型能力翻译后发送，不支持的档位自动收敛或不发该字段。
 
@@ -51,17 +64,17 @@ dsh plugin --profile web add github:guowenzheng941117/dsh-opencode-zen
 
 什么都不配也行——插件最终兜底到官方公开档 `public`。
 
-### 自定义模型清单
+### 注释模型清单（可选）
 
-模型列表外置在根目录 `models.json`，接受 `{ "models": [...] }` 或裸数组，每项至少要有字符串 `id` 字段：
+免费模型已实时从 API 发现，通常你无需改动任何东西。根目录 `models.json` 是一层**按 id 的注释层** —— 用来补充 `/v1/models` 列表不返回的元数据（名称、上下文窗口、推理档位、图片输入、数据风险）。它接受 `{ "models": [...] }` 或裸数组，每项至少要有字符串 `id` 字段：
 
 ```json
-{ "id": "x-preview-f-free", "name": "Ox Alpha Free", "contextWindow": 1000000, "reasoningEfforts": ["low", "high", "max"] }
+{ "id": "hy3-free", "name": "Hunyuan 3 (Free)", "contextWindow": 190000, "reasoningEfforts": ["low", "high"] }
 ```
 
-- 增删条目即可增删模型，改完重启 `dsh web` 生效
 - `reasoningEfforts`：数组 = 该模型接受的推理档位词汇；`null` / `false` = 不发送显式控制
-- 文件缺失或损坏时，回退到内置的 6 模型默认表
+- `input`：`["text","image"]` 为该模型开启视觉
+- 文件缺失或损坏时，回退到内置默认表
 
 ## 常见问题
 

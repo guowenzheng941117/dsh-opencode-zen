@@ -1,39 +1,54 @@
 {
   "models": [
     {
-      "id": "x-preview-f-free",
-      "name": "Ox Alpha Free",
-      "contextWindow": 1000000,
-      "description": "OpenCode Zen 免费档：隐身模型，零保留、不训练",
-      "dataRisk": false,
-      "reasoningEfforts": [
-        "low",
-        "high",
-        "max"
-      ],
-      "input": [
-        "text",
-        "image"
-      ]
-    },
-    {
       "id": "hy3-free",
       "name": "Hunyuan 3 (Free)",
       "contextWindow": 190000,
       "description": "OpenCode Zen 免费档（腾讯混元 Hy3）",
       "dataRisk": true,
-      "reasoningEfforts": [
-        "low",
-        "high"
-      ]
+      "reasoningEfforts": ["low", "high"]
+    },
+    {
+      "id": "deepseek-v4-flash-free",
+      "name": "DeepSeek V4 Flash (Free)",
+      "contextWindow": 200000,
+      "description": "OpenCode Zen 免费档：推理 + 工具调用，日常主力",
+      "reasoningEfforts": ["low", "high"]
     },
     {
       "id": "mimo-v2.5-free",
       "name": "MiMo 2.5 (Free)",
       "contextWindow": 200000,
       "description": "OpenCode Zen 免费档（小米 MiMo 2.5）",
-      "dataRisk": true,
       "reasoningEfforts": null
+    },
+    {
+      "id": "muse-spark-1.2-contributor-free",
+      "name": "Muse Spark 1.2 Contributor (Free)",
+      "contextWindow": 200000,
+      "description": "OpenCode Zen 免费档（Muse Spark 1.2 贡献者）",
+      "reasoningEfforts": ["low", "high"]
+    },
+    {
+      "id": "nemotron-3-ultra-free",
+      "name": "Nemotron 3 Ultra (Free)",
+      "contextWindow": 200000,
+      "description": "OpenCode Zen 免费档（NVIDIA Nemotron 3 Ultra）",
+      "reasoningEfforts": ["low", "high"]
+    },
+    {
+      "id": "nemotron-3.5-lightning-free",
+      "name": "Nemotron 3.5 Lightning (Free)",
+      "contextWindow": 200000,
+      "description": "OpenCode Zen 免费档（NVIDIA Nemotron 3.5 Lightning）",
+      "reasoningEfforts": ["low", "high"]
+    },
+    {
+      "id": "laguna-s-2.1-free",
+      "name": "Laguna S 2.1 (Free)",
+      "contextWindow": 200000,
+      "description": "OpenCode Zen 免费档（Laguna S 2.1）",
+      "reasoningEfforts": ["low", "high"]
     }
   ]
 }

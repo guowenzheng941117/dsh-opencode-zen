@@ -8,10 +8,10 @@
 
 ## Why?
 
-The conversation you're reading right now is powered by this plugin: **Ox Alpha (`x-preview-f-free`) with a 1M-token window, on the free tier, for free.**
+The conversation you're reading right now is powered by this plugin, on the OpenCode Zen **free tier** — zero config, zero cost.
 
 - 💰 **Actually free** — the official free tier authenticates with the literal key `public`; no account, no signup, no API key.
-- 🧮 **Three free models** — Ox Alpha, Tencent Hunyuan Hy3, Xiaomi MiMo 2.5; the catalog lives in `models.json`, edit it freely.
+- 🧮 **Live free catalog** — the available free models are pulled at runtime from OpenCode Zen's `/v1/models` endpoint (no login required), so the picker always reflects what's currently offered; `models.json` is an annotation overlay for metadata.
 - ⚡ **Install & go** — restart `dsh web` and the `opencode` route appears in the model selector; no configuration needed.
 - 🔑 **Stack quotas** — pairs with dsh-api-key-pool for round-robin rotation across multiple free accounts, automatically.
 - 🛡️ **Quota-aware** — built-in 429/5xx backoff and request throttling so you never blow through the free quota.
@@ -19,15 +19,28 @@ The conversation you're reading right now is powered by this plugin: **Ox Alpha 
 - 🖼️ **Resilient vision** — images never ride in your main request: each one is converted to a text description by an isolated, disposable side-request (fresh request on every retry, cached by content hash and reused across turns), so an unstable upstream vision endpoint can degrade a single picture to a placeholder but can never poison or kill your conversation.
 - 🧠 **Full parity** — streaming, reasoning-content passthrough, and tool calls, same experience as paid models.
 
-## Models (as configured in `models.json`)
+## Models (discovered live)
 
-| Model | Context window | Reasoning efforts | Notes |
-|---|---|---|---|
-| `x-preview-f-free` | 1M | low / high (default) / max | Ox Alpha · zero retention, no training, image input supported; daily driver |
-| `hy3-free` | 190k | low / high (default) | Tencent Hunyuan Hy3 |
-| `mimo-v2.5-free` | 200k | no explicit control | Xiaomi MiMo 2.5 |
+The free model list is **not hardcoded** — it is pulled live from two API sources and merged:
 
-The selector always offers `off` / `low` / `high` (default) / `max`; the adapter translates each level to what the chosen model actually accepts, or omits the field when unsupported.
+- **Availability** = `https://opencode.ai/zen/v1/models` (OpenAI-compatible list, no login required). This is what zen actually serves *right now*, so only usable models appear.
+- **Specs** = `https://models.dev/api.json` (the full registry opencode itself uses), giving each model its **context window, input modalities (text/image/audio/pdf), reasoning effort levels, tool-call support**, etc.
+
+The spec map is cached to disk (`~/.cache/dsh-opencode-zen/models-dev-specs.json`, TTL `DSH_ZEN_MODELS_TTL_MS`, default 10 min) so startup never blocks on the ~4MB models.dev fetch. If a source fails, it falls back gracefully: zen → models.dev catalog → static `models.json`. The current live set (availability ∩ specs):
+
+| Model | Notes |
+|---|---|
+| `hy3-free` | Tencent Hunyuan Hy3 |
+| `deepseek-v4-flash-free` | DeepSeek V4 Flash — reasoning + tools, daily driver |
+| `mimo-v2.5-free` | Xiaomi MiMo 2.5 |
+| `muse-spark-1.2-contributor-free` | Muse Spark 1.2 Contributor |
+| `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra |
+| `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
+| `laguna-s-2.1-free` | Laguna S 2.1 |
+
+If the live fetch fails, the adapter falls back to the static `models.json` so the picker still works offline. Models removed upstream disappear automatically; new ones appear without a plugin update.
+
+The selector always offers `off` / `low` / `high` (default) / `max`; the adapter translates each level to what the chosen model accepts, or omits the field when unsupported.
 
 ## Installation
 
@@ -51,17 +64,17 @@ Set `OPENCODE_ZEN_API_KEY` or `OPENCODE_GO_API_KEY` before starting `dsh web`.
 
 Nothing configured? It falls back to the official public tier (`public`).
 
-### Customize the model list
+### Annotate the model list (optional)
 
-The model catalog is externalized in `models.json` at the repo root. It accepts `{ "models": [...] }` or a bare array; every entry needs at least a string `id`:
+Free models are discovered live from the API, so you normally don't edit anything. `models.json` at the repo root is an **annotation overlay** keyed by model id — it supplies metadata the `/v1/models` list doesn't return (name, context window, reasoning efforts, image input, data risk). It accepts `{ "models": [...] }` or a bare array; every entry needs at least a string `id`:
 
 ```json
-{ "id": "x-preview-f-free", "name": "Ox Alpha Free", "contextWindow": 1000000, "reasoningEfforts": ["low", "high", "max"] }
+{ "id": "hy3-free", "name": "Hunyuan 3 (Free)", "contextWindow": 190000, "reasoningEfforts": ["low", "high"] }
 ```
 
-- Add/remove entries to change the picker; restart `dsh web` to apply.
 - `reasoningEfforts`: an array = the wire values this model accepts; `null` / `false` = never send explicit control.
-- If the file is missing or corrupt, the plugin falls back to its built-in six-model default table.
+- `input`: `["text","image"]` enables vision for that model.
+- If the file is missing or corrupt, the plugin falls back to its built-in default table.
 
 ## Troubleshooting
 
