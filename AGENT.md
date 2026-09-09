@@ -25,6 +25,20 @@
 - 改 `lib/index.js` 后 `dev_reload_package` 只重建 fiber、**不重读磁盘**，需**整进程重启 `dsh web`**：
   用 detached `setsid` 包装器 `kill` 旧进程后自启，并 `curl` 自检 3080 端口。
 - 鉴权：zen 用字面量 key `public`，`Authorization: Bearer public`；`OPENCODE_BASE=https://opencode.ai/zen/v1`。
+- **归属闸门（2026-09-09 修复，关键）**：zen 免费档网关**强制**要求请求带 `x-session-id` 头，
+  缺失即 `400 {"type":"MissingSessionID","message":"OpenCode's free tier can only be used in OpenCode"}`。
+  - 这不是鉴权：值随意、无需签名、连 `Authorization` 都可省；实测任意值（含裸 uuid）都放行。
+  - 来源：opencode 的 `packages/opencode/src/session/llm.ts` 每次请求都发 `x-session-id: <sessionID>`
+    （子会话另加 `x-parent-session-id`），网关据此判定"是否从 opencode 发出"。
+  - 插件侧统一走 `zenHeaders(sessionId)`：**所有**发往 zen 的请求（主对话 / 视觉旁路 /
+    切条描述 / `/models` 目录）都必须经过它，漏一处即整条链路 400。
+  - `sessionId` 取自 `GenerateOptions.sessionId`（agent-loop 已注入真实会话 id），
+    缺省回退到进程级稳定 id `FALLBACK_SESSION_ID`，保证同一进程内续跑/多路请求归因一致。
+  - 唯一必需头就是它：`HTTP-Referer` / `X-Title` 加不加都一样（实测）。
+- 当前 zen 实测（2026-09-09）：`mimo-v2.5-free` / `ling-3.0-flash-fin-free` /
+  `nemotron-3-ultra-free` / `nemotron-3.5-lightning-free` 可用；
+  `muse-spark-*` 为 `RegionError`（区域限制）、`deepseek-v4-flash-free` 上游 `Model is unavailable`
+  ——均为服务端状态，非本插件缺陷。
 
 ## 验证速记
 - 离线合并测试：`node tmp/test_merge.js`（需先放好 `tmp/models_api.json` 与 `tmp/zen_models.json`）。

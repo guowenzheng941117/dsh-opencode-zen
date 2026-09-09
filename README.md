@@ -11,6 +11,7 @@
 The conversation you're reading right now is powered by this plugin, on the OpenCode Zen **free tier** — zero config, zero cost.
 
 - 💰 **Actually free** — the official free tier authenticates with the literal key `public`; no account, no signup, no API key.
+- 🎫 **Plays by the gateway's rules** — the zen free tier rejects requests without an `x-session-id` header (that is how opencode's own CLI marks its traffic). The plugin stamps one on every request, using your real DSH session id.
 - 🧮 **Live free catalog** — the available free models are pulled at runtime from OpenCode Zen's `/v1/models` endpoint (no login required), so the picker always reflects what's currently offered; `models.json` is an annotation overlay for metadata.
 - ⚡ **Install & go** — restart `dsh web` and the `opencode` route appears in the model selector; no configuration needed.
 - 🔑 **Stack quotas** — pairs with dsh-api-key-pool for round-robin rotation across multiple free accounts, automatically.

@@ -1,7 +1,7 @@
 {
   "name": "dsh-opencode-zen",
   "description": "OpenCode Zen free-tier models for DeepSeek Harness: zero-config public-key provider with quota-aware pacing.",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "type": "commonjs",
   "main": "lib/index.js",
   "exports": {
@@ -21,7 +21,7 @@
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "^4.0.1",
-    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.5-alpha.1",
     "@deepseek-ai/schemastery": "^3.18.1"
   },
   "repository": {
