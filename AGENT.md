@@ -2,6 +2,34 @@
 
 本文件供后续会话/克隆快速回顾本插件的关键事实与协作约定。
 
+## 版本跟随（dsh 升级后必做）
+- **本插件的 dsh 依赖版本必须跟随宿主 dsh 的升级，一次都不能落下。** dsh 宿主升级后，
+  `package.json` 的 `peerDependencies` 里 `@deepseek-ai/*` 版本必须同步 bump 到宿主实际安装的
+  版本——不是"能兼容就行"，而是保持声明与运行实况一致。
+- 宿主版本唯一事实来源：
+  `node -p "require('/root/.nvm/versions/node/v24.18.0/lib/node_modules/@deepseek-ai/dsh/package.json').version"`
+  （当前 `0.1.5-rc.1`；`@deepseek-ai/dsh-llm` 同步为 `0.1.5-rc.1`）。
+- **红线**：这些包**只能在 `peerDependencies`，绝不能进 `dependencies`**——写进 dependencies 会在
+  插件目录装出第二份副本，与宿主实例不是同一个模块，服务注册与类型判断会错乱。
+- 用 `^` 范围（如 `^0.1.5-rc.1`），不要锁死精确版本：预发布段（alpha/rc）持续滚动，锁死会在
+  dsh 升到下一个 rc 时误报不兼容。
+- 与 `dsh-codebuddy` 保持同一约定（其 `AGENTS.md` 有同名章节）。
+
+## 图像预算（与官方对齐）
+- 图像字节的缩放/编码/缓存一律复用核心 `ctx.attachments.readImageRequest`，
+  **不要自己解码或重编码**（sharp 只用于「切条补救」这一独立场景）。
+- 传入的预算走 `resolveRequestImagePolicy(model)`，与官方 `@deepseek-ai/dsh-llm-deepseek`
+  同语义：`imagePixelBudget`（数字或 `"low"` → `512×512`，缺省 `640000`）、
+  `imageMaxBytes`（缺省 **1 MiB**）。该函数是官方适配器私有实现（未从
+  `@deepseek-ai/dsh-llm` 导出），故按上游源码 1:1 复刻——改动前先对照上游。
+- 模型条目可经 `models.json` 声明 `imagePixelBudget` / `imageMaxBytes` 覆盖默认值；
+  `normalizeEntry` 负责透传（**新增字段时勿漏透传**，否则声明到不了策略层）。
+- **zen 不适用「超限卸载」**：zen 是视觉旁路架构——图片在序列化阶段被换成文字描述，
+  主请求 wire 层**永不出现 `image_url`**（已实测：连喂 700 张图，wire 里 image_url 数仍为 0）。
+  因此官方 `offloadRequestImagesWithPolicy` 在此无对象可卸，不要照搬。
+- 核心解析手法同 codebuddy：`coreLlm()` 按 dsh 安装位置解析（插件是 link 安装，
+  自身 `node_modules` 无核心包）；**不要**把核心包写进 `dependencies`。
+
 ## 工作约定（Conventions）
 - **临时文件放 `./tmp`，不要放全局 `/tmp`。** 所有中间产物（下载的 JSON、测试脚本、
   重启/运行日志等）统一写在仓库内的 `tmp/`（即当前工作目录下的 `tmp`），**不是**系统的

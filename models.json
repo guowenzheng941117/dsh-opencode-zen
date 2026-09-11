@@ -19,8 +19,9 @@
       "id": "mimo-v2.5-free",
       "name": "MiMo 2.5 (Free)",
       "contextWindow": 200000,
-      "description": "OpenCode Zen 免费档（小米 MiMo 2.5）",
-      "reasoningEfforts": null
+      "description": "OpenCode Zen 免费档（小米 MiMo 2.5，支持视觉）",
+      "reasoningEfforts": null,
+      "input": ["text", "image"]
     },
     {
       "id": "muse-spark-1.2-contributor-free",

@@ -75,7 +75,34 @@ Free models are discovered live from the API, so you normally don't edit anythin
 
 - `reasoningEfforts`: an array = the wire values this model accepts; `null` / `false` = never send explicit control.
 - `input`: `["text","image"]` enables vision for that model.
+- `imagePixelBudget` / `imageMaxBytes`: optional per-model image request budgets. Omitted = the official defaults (`640000` px, `1 MiB`); `"low"` selects the low-detail pixel budget (`512×512`).
 - If the file is missing or corrupt, the plugin falls back to its built-in default table.
+
+## Image budgets
+
+Image downscaling, quality-ladder encoding, and caching are **delegated to the harness
+attachment service** (`ctx.attachments.readImageRequest`) — this plugin never decodes or
+re-encodes pixels itself (its `sharp` dependency is reserved for the strip-splitting
+remedy on the vision channel).
+
+The budgets passed to that service follow the official
+`@deepseek-ai/dsh-llm-deepseek` semantics, via `resolveRequestImagePolicy(model)`:
+
+| Field | Value |
+| --- | --- |
+| `imagePixelBudget` | number, or `"low"` → `512×512`; default `640000` |
+| `imageMaxBytes` | number; default **`1 MiB`** |
+
+> That resolver is a **private** implementation of the official DeepSeek adapter (it is
+> *not* exported from `@deepseek-ai/dsh-llm`), so this plugin carries a 1:1 replica
+> verified case-by-case against the upstream original. If upstream changes these
+> defaults or their semantics, this replica must be re-checked.
+
+**No image offloading here.** Zen uses a *vision-bypass* architecture: images are replaced
+with text descriptions during serialization, so the main request's wire layer never
+contains an `image_url` at all (verified: feeding 700 images still yields 0 `image_url`
+entries). The official `offloadRequestImagesWithPolicy` therefore has nothing to offload,
+and is deliberately not used.
 
 ## Troubleshooting
 
