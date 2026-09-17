@@ -66,6 +66,14 @@
     故该线空流时**直接退回非流式**（`fetchOnceNonStreaming` +
     `anthropicMessageToEvents`），不再重试流式。此即 union-alpha 长回答报
     "stream ended without any data" 的根因。
+  - **超时预算必须按请求形态分档（2026-09-17 实测，曾致长回答整轮失败）**：
+    非流式请求下网关会**把整段生成缓冲完才发响应头**——实测长回答的 headers 与
+    body 同在 27.5s 到达，即 `fetch()` resolve 时刻 ≈ 整段生成耗时，而非首字节
+    时间。若非流式沿用 `CONNECT_TIMEOUT_MS`(45s)，**任何超过 45s 的正常长回答
+    都会被误判为 "connect timeout"**。故新增 `NONSTREAM_TIMEOUT_MS`(240s)，
+    `openStreamOnce` 里按 `options.nonStreaming` 二选一。
+    实测修复后：短回答 56.4s、长回答 81.3s（2045 字）均完整取回——两者都 >45s，
+    修复前必失败。**改超时相关代码时勿把两档合并。**
   - **视觉旁路也必须按协议走**：`describeRequest()` 统一产出端点与请求体
     （Anthropic 用 `image`+`source.base64` 打 `/v1/messages`；OpenAI 用
     `image_url` 打 `/chat/completions`），`extractDescribeText()` 兼容两种响应形态。
@@ -129,4 +137,6 @@
 - 双协议自检：`node -e` 用适配器 `stream()` 分别跑 `union-alpha`（Anthropic 线，
   应产出 text/tool-call 块）与 `nemotron-3.5-lightning-free`（OpenAI 线）——
   改协议相关代码后两条线都要过。
-- 网关有 ~60s 级限流：密集自检脚本要在请求间 `sleep 6~12s`，否则表现为超时而非 403。
+- **网关有 ~60s 级限流**：密集自检脚本要在请求间 `sleep 6~12s`（实测重探时
+  15~20s 间隔更稳），否则表现为 `503 Endpoint is unavailable` 或超时，而非 403。
+  **区分限流与真故障**：503 是限流/上游抖动（可重试）；持续 403 才是归属闸门。
