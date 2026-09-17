@@ -33,21 +33,26 @@
 |---|---|
 | `union-alpha` | Union Alpha · 隐身编程模型；走 **Anthropic `/v1/messages` 协议**，支持工具调用与视觉 |
 | `big-pickle` | Big Pickle |
-| `deepseek-v4-flash-free` | DeepSeek V4 Flash · 推理 + 工具调用，日常主力 |
 | `mimo-v2.5-free` | 小米 MiMo 2.5 |
 | `ling-3.0-flash-fin-free` | 蚂蚁 Ling 3.0 Flash Fin |
-| `muse-spark-1.2-contributor-free` | Muse Spark 1.2 Contributor |
 | `muse-spark-1.3-contributor-free` | Muse Spark 1.3 Contributor |
 | `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra（1M 上下文） |
 | `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
 
 成员身份不一定写在名字里：`union-alpha` 与 `big-pickle` 都不带 `free` 后缀，
 因此插件也会接纳 models.dev 声明为零成本（`cost.input`/`cost.output` 均为 0）的模型。
-`hy3-free` 与 `laguna-s-2.1-free` 已从 zen 下线。
-由于成员是实时拉取的，该表仅作示意、非权威：选择器由 `/v1/models` 驱动，
-上架/下架会自行反映。
 
-若实时拉取失败，插件回退到静态 `models.json`，选择器仍可离线工作。上游下架的模型自动消失，新上的模型无需更新插件即可出现。
+**已清理的不免费模型（2026-09-17 对照官网 pricing 核实）**：`hy3-free`、
+`laguna-s-2.1-free`（已从 zen 目录下线），`deepseek-v4-flash-free`、
+`muse-spark-1.2-contributor-free`（id 仍在 `/models` 目录，但官网免费价格表已除名，
+免费状态不再成立）。插件内置 `EXCLUDED_MODEL_IDS` 硬闸门：这些 id 无论从
+zen 实时目录、models.dev 还是静态 `models.json` 兜底出现，都会被剔除，不再展示。
+
+由于成员是实时拉取的，该表仅作示意、非权威：选择器由 `/v1/models` 驱动，
+上架/下架会自行反映；`EXCLUDED_MODEL_IDS` 名单外的过期条目由实时目录自动剔除。
+
+若实时拉取失败，插件回退到静态 `models.json`，选择器仍可离线工作，退役模型在
+兜底路径同样被排除、不会重新出现。上游下架的模型自动消失，新上的模型无需更新插件即可出现。
 
 选择器统一提供 `off` / `low` / `high`（默认）/ `max` 四档；插件按各模型能力翻译后发送，不支持的档位自动收敛或不发该字段。
 
@@ -166,7 +171,7 @@ dsh plugin --profile web add github:guowenzheng941117/dsh-opencode-zen
 免费模型已实时从 API 发现，通常你无需改动任何东西。根目录 `models.json` 是一层**按 id 的注释层** —— 用来补充 `/v1/models` 列表不返回的元数据（名称、上下文窗口、推理档位、图片输入、数据风险）。它接受 `{ "models": [...] }` 或裸数组，每项至少要有字符串 `id` 字段：
 
 ```json
-{ "id": "hy3-free", "name": "Hunyuan 3 (Free)", "contextWindow": 190000, "reasoningEfforts": ["low", "high"] }
+{ "id": "mimo-v2.5-free", "name": "MiMo 2.5 (Free)", "contextWindow": 200000, "reasoningEfforts": ["low", "high"], "input": ["text", "image"] }
 ```
 
 - `reasoningEfforts`：数组 = 该模型接受的推理档位词汇；`null` / `false` = 不发送显式控制

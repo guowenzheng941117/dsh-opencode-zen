@@ -33,22 +33,29 @@ The spec map is cached to disk (`~/.cache/dsh-opencode-zen/models-dev-specs.json
 |---|---|
 | `union-alpha` | Union Alpha — stealth coding model; **Anthropic `/v1/messages` protocol**, tool use + vision |
 | `big-pickle` | Big Pickle |
-| `deepseek-v4-flash-free` | DeepSeek V4 Flash — reasoning + tools, daily driver |
 | `mimo-v2.5-free` | Xiaomi MiMo 2.5 |
 | `ling-3.0-flash-fin-free` | Ling 3.0 Flash Fin |
-| `muse-spark-1.2-contributor-free` | Muse Spark 1.2 Contributor |
 | `muse-spark-1.3-contributor-free` | Muse Spark 1.3 Contributor |
 | `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra (1M context) |
 | `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
 
 Membership is not always signalled by the name: `union-alpha` and `big-pickle` carry no
 `free` suffix, so the adapter also accepts any model that models.dev declares at zero cost
-(`cost.input`/`cost.output` both 0). `hy3-free` and `laguna-s-2.1-free` are no longer served
-by zen. Because membership is live, this table is illustrative rather than
-authoritative: the picker is driven by `/v1/models`, so promotions and retirements show
-up on their own.
+(`cost.input`/`cost.output` both 0).
 
-If the live fetch fails, the adapter falls back to the static `models.json` so the picker still works offline. Models removed upstream disappear automatically; new ones appear without a plugin update.
+**Retired (no longer free) models removed on 2026-09-17, verified against the official
+pricing page**: `hy3-free` and `laguna-s-2.1-free` (delisted from the zen catalog), plus
+`deepseek-v4-flash-free` and `muse-spark-1.2-contributor-free` (their ids still appear in
+`/models`, but the official free-tier pricing table no longer lists them, so they no longer
+count as free). The adapter ships a hard exclusion gate, `EXCLUDED_MODEL_IDS`: these ids
+are dropped no matter which source surfaces them — the live zen catalog, models.dev, or
+the static `models.json` fallback.
+
+Because membership is live, this table is illustrative rather than
+authoritative: the picker is driven by `/v1/models`, so promotions and retirements show
+up on their own; entries outside `EXCLUDED_MODEL_IDS` age out with the live catalog.
+
+If the live fetch fails, the adapter falls back to the static `models.json` so the picker still works offline; retired models are excluded on the fallback path too and never reappear. Models removed upstream disappear automatically; new ones appear without a plugin update.
 
 The selector always offers `off` / `low` / `high` (default) / `max`; the adapter translates each level to what the chosen model accepts, or omits the field when unsupported.
 
@@ -181,7 +188,7 @@ Nothing configured? It falls back to the official public tier (`public`).
 Free models are discovered live from the API, so you normally don't edit anything. `models.json` at the repo root is an **annotation overlay** keyed by model id — it supplies metadata the `/v1/models` list doesn't return (name, context window, reasoning efforts, image input, data risk). It accepts `{ "models": [...] }` or a bare array; every entry needs at least a string `id`:
 
 ```json
-{ "id": "hy3-free", "name": "Hunyuan 3 (Free)", "contextWindow": 190000, "reasoningEfforts": ["low", "high"] }
+{ "id": "mimo-v2.5-free", "name": "MiMo 2.5 (Free)", "contextWindow": 200000, "reasoningEfforts": ["low", "high"], "input": ["text", "image"] }
 ```
 
 - `reasoningEfforts`: an array = the wire values this model accepts; `null` / `false` = never send explicit control.

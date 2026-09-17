@@ -83,9 +83,9 @@
     base64 payload"）并要求直接附图，四象限颜色全错；同一张图作为用户消息直传则全中。
     故工具结果图一律走文字旁路——这与"原生支持视觉"无关，是模型对工具输出内图的处理限制。
   - 判定随模型走：`usesNativeImage()` 先看模型条目的 `nativeImage`，再退回内置名单。
-- **视觉（image）以 `models.dev` 的 `modalities.input` 为准**：已核实 `hy3-free` **无**视觉、
-  `mimo-v2.5-free` / `union-alpha` **有**视觉（与 models.dev 一致）；旧的 blanket revert 已过时。
-  `models.json` 仍可显式写 `input: ["text","image"]` 覆盖。
+- **视觉（image）以 `models.dev` 的 `modalities.input` 为准**：已核实
+  `mimo-v2.5-free` / `union-alpha` **有**视觉、`hy3-free`（已退役）无视觉；
+  旧的 blanket revert 已过时。`models.json` 仍可显式写 `input: ["text","image"]` 覆盖。
 - 成员真相 = zen 实时可用 id ∩ 免费判定；`models.json` 只是**注释/兜底层**（name/上下文/推理档/数据风险）。
 - 改 `lib/index.js` 后 `dev_reload_package` 只重建 fiber、**不重读磁盘**，需**整进程重启 `dsh web`**：
   用 detached `setsid` 包装器 `kill` 旧进程后自启，并 `curl` 自检 3080 端口。
@@ -111,12 +111,16 @@
   - 插件侧统一走 `zenHeaders(sessionId)`：**所有**发往 zen 的请求（主对话 / 视觉旁路 /
     切条描述 / `/models` 目录）都必须经过它，漏一处即整条链路 403。
   - 网关另有 ~60s 级限流：密集实验会被打断（表现为超时，不是 403），排查时注意区分。
-- 当前 zen 实测（2026-09-17，免费档可用）：`hy3-free` / `deepseek-v4-flash-free`(上游仍
-  `Model is unavailable`) / `mimo-v2.5-free` / `ling-3.0-flash-fin-free` /
+- **退役模型闸门（2026-09-17 对照官网 pricing 清理）**：`hy3-free`、`laguna-s-2.1-free`
+  已从 zen `/models` 下线；`deepseek-v4-flash-free`、`muse-spark-1.2-contributor-free`
+  id 仍在目录但官网免费价格表已除名。四个 id 写死在 `EXCLUDED_MODEL_IDS`
+  （lib/index.js），zen 实时目录 / models.dev / 静态 models.json / 旧磁盘缓存任一来源
+  出现都会被剔除；`models.json` 里条目另带 `retired: true` 双保险。
+  **后续若再发现某模型不免费：先加进 `EXCLUDED_MODEL_IDS`，再清理 `models.json` 与文档。**
+- 当前 zen 实测（2026-09-17，免费档可用）：`mimo-v2.5-free` / `ling-3.0-flash-fin-free` /
   `nemotron-3-ultra-free` / `nemotron-3.5-lightning-free` /
-  `muse-spark-1.2-contributor-free` / `muse-spark-1.3-contributor-free`；
-  `muse-spark-*` 在本机为 `not available in your country`（区域限制）——服务端状态，非插件缺陷。
-  `laguna-s-2.1-free` 已从 zen `/models` 下线。
+  `muse-spark-1.3-contributor-free` / `big-pickle` / `union-alpha`；
+  `muse-spark-1.3-contributor-free` 在本机为 `not available in your country`（区域限制）——服务端状态，非插件缺陷。
 
 ## 验证速记
 - 实时自检：独立 `node -e` require 本包 `OpenCodeZenAdapter.listModels()` 实时拉取免费清单。
