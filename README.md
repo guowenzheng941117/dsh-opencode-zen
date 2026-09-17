@@ -31,7 +31,6 @@ The spec map is cached to disk (`~/.cache/dsh-opencode-zen/models-dev-specs.json
 
 | Model | Notes |
 |---|---|
-| `hy3-free` | Tencent Hunyuan Hy3 |
 | `deepseek-v4-flash-free` | DeepSeek V4 Flash — reasoning + tools, daily driver |
 | `mimo-v2.5-free` | Xiaomi MiMo 2.5 |
 | `ling-3.0-flash-fin-free` | Ling 3.0 Flash Fin |
@@ -39,6 +38,11 @@ The spec map is cached to disk (`~/.cache/dsh-opencode-zen/models-dev-specs.json
 | `muse-spark-1.3-contributor-free` | Muse Spark 1.3 Contributor |
 | `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra (1M context) |
 | `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
+
+As of 2026-09-17 the free set is down to these seven — `hy3-free` and
+`laguna-s-2.1-free` are no longer served by zen. Because membership is live, that
+table is illustrative, not authoritative: the picker is driven by
+`/v1/models`, so promotions and retirements show up on their own.
 
 If the live fetch fails, the adapter falls back to the static `models.json` so the picker still works offline. Models removed upstream disappear automatically; new ones appear without a plugin update.
 
@@ -93,7 +97,7 @@ prompt cache warm.
 dsh plugin --profile web add github:guowenzheng941117/dsh-opencode-zen
 ```
 
-Restart `dsh web` → **Settings → Models** → pick provider `opencode` → choose a free model (start with `x-preview-f-free`).
+Restart `dsh web` → **Settings → Models** → pick provider `opencode` → choose a free model (start with `nemotron-3.5-lightning-free`).
 
 ## Configuration (optional — zero config by default)
 

@@ -31,7 +31,6 @@
 
 | 模型 | 备注 |
 |---|---|
-| `hy3-free` | 腾讯混元 Hy3 |
 | `deepseek-v4-flash-free` | DeepSeek V4 Flash · 推理 + 工具调用，日常主力 |
 | `mimo-v2.5-free` | 小米 MiMo 2.5 |
 | `ling-3.0-flash-fin-free` | 蚂蚁 Ling 3.0 Flash Fin |
@@ -39,6 +38,10 @@
 | `muse-spark-1.3-contributor-free` | Muse Spark 1.3 Contributor |
 | `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra（1M 上下文） |
 | `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
+
+截至 2026-09-17，免费档只剩这 7 个 —— `hy3-free` 与 `laguna-s-2.1-free` 已从 zen 下线。
+由于成员是实时拉取的，该表仅作示意、非权威：选择器由 `/v1/models` 驱动，
+上架/下架会自行反映。
 
 若实时拉取失败，插件回退到静态 `models.json`，选择器仍可离线工作。上游下架的模型自动消失，新上的模型无需更新插件即可出现。
 
@@ -87,7 +90,7 @@ baseURL 指向本地日志代理，跑 `opencode run`。1.18.31 实际发送：
 dsh plugin --profile web add github:guowenzheng941117/dsh-opencode-zen
 ```
 
-重启 `dsh web` → **设置 → 模型** → 选择提供器 `opencode` → 挑一个免费模型（推荐 `x-preview-f-free`），开聊。
+重启 `dsh web` → **设置 → 模型** → 选择提供器 `opencode` → 挑一个免费模型（推荐 `nemotron-3.5-lightning-free`），开聊。
 
 ## 配置（可选，默认零配置）
 
