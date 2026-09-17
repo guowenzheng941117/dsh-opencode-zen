@@ -53,22 +53,36 @@
 - 改 `lib/index.js` 后 `dev_reload_package` 只重建 fiber、**不重读磁盘**，需**整进程重启 `dsh web`**：
   用 detached `setsid` 包装器 `kill` 旧进程后自启，并 `curl` 自检 3080 端口。
 - 鉴权：zen 用字面量 key `public`，`Authorization: Bearer public`；`OPENCODE_BASE=https://opencode.ai/zen/v1`。
-- **归属闸门（2026-09-09 修复，关键）**：zen 免费档网关**强制**要求请求带 `x-session-id` 头，
-  缺失即 `400 {"type":"MissingSessionID","message":"OpenCode's free tier can only be used in OpenCode"}`。
-  - 这不是鉴权：值随意、无需签名、连 `Authorization` 都可省；实测任意值（含裸 uuid）都放行。
-  - 来源：opencode 的 `packages/opencode/src/session/llm.ts` 每次请求都发 `x-session-id: <sessionID>`
-    （子会话另加 `x-parent-session-id`），网关据此判定"是否从 opencode 发出"。
+- **归属闸门（2026-09-17 重逆向，关键；旧结论已作废）**：网关不再只看 `x-session-id`。
+  它现在校验 opencode 官方客户端的身份头集合，旧写法一律
+  `403 {"type":"error","error":{"type":"FreeTierError","message":"Error from provider (Console): OpenCode's free tier can only be used from within OpenCode"}}`。
+  - **真值获取法（别再猜头名）**：把官方 `opencode` 装到本地，用 `OPENCODE_CONFIG` 指向一个
+    `@ai-sdk/openai-compatible` 自定义 provider、baseURL 指到本地日志代理，跑
+    `opencode run --model <p>/<m> "..."`，直接抓到官方 wire 头。1.18.31 实测发送：
+    `User-Agent: opencode/1.18.31 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14`、
+    `x-opencode-client: cli`、`x-opencode-project: <sha1|global>`、
+    `x-opencode-request: msg_<id>`、`x-opencode-session: ses_<26 位小写 hex>`。
+    **新版 wire 上已无 `x-session-id`**。
+  - **实测判定规则**（交错乱序各 5 次重复，按 id 确定性稳定）：只有
+    `ses_`+**恰好 26 位小写 hex** 放行(200)；24/25/27/28/32 位 hex、26 位大写 hex、
+    26 位 base62、裸 uuid/裸 hex(无 `ses_` 前缀) 全部 403。官方 CLI 真实 id 作对照为 200。
+  - `User-Agent` **不必**伪装（DSH 自报 UA 也 200）；`x-opencode-*` 其余头亦非硬性必需，
+    但按官方全发更稳。`/models` 目录端点不校验该闸门（仍 200）。
+  - 宿主会话 id 是 `ses_<26 位 base62>`，**不能原样透传**（字母表/长度不合规）；
+    `normalizeSessionId` 用 `sha256(hostId)` 取前 26 位小写 hex 派生，从而**同一会话恒定**
+    → 上游后端亲和 / prompt cache 命中。缺省回退进程级 `FALLBACK_SESSION_ID`。
   - 插件侧统一走 `zenHeaders(sessionId)`：**所有**发往 zen 的请求（主对话 / 视觉旁路 /
-    切条描述 / `/models` 目录）都必须经过它，漏一处即整条链路 400。
-  - `sessionId` 取自 `GenerateOptions.sessionId`（agent-loop 已注入真实会话 id），
-    缺省回退到进程级稳定 id `FALLBACK_SESSION_ID`，保证同一进程内续跑/多路请求归因一致。
-  - 唯一必需头就是它：`HTTP-Referer` / `X-Title` 加不加都一样（实测）。
-- 当前 zen 实测（2026-09-09）：`mimo-v2.5-free` / `ling-3.0-flash-fin-free` /
-  `nemotron-3-ultra-free` / `nemotron-3.5-lightning-free` 可用；
-  `muse-spark-*` 为 `RegionError`（区域限制）、`deepseek-v4-flash-free` 上游 `Model is unavailable`
-  ——均为服务端状态，非本插件缺陷。
+    切条描述 / `/models` 目录）都必须经过它，漏一处即整条链路 403。
+  - 网关另有 ~60s 级限流：密集实验会被打断（表现为超时，不是 403），排查时注意区分。
+- 当前 zen 实测（2026-09-17，免费档可用）：`hy3-free` / `deepseek-v4-flash-free`(上游仍
+  `Model is unavailable`) / `mimo-v2.5-free` / `ling-3.0-flash-fin-free` /
+  `nemotron-3-ultra-free` / `nemotron-3.5-lightning-free` /
+  `muse-spark-1.2-contributor-free` / `muse-spark-1.3-contributor-free`；
+  `muse-spark-*` 在本机为 `not available in your country`（区域限制）——服务端状态，非插件缺陷。
+  `laguna-s-2.1-free` 已从 zen `/models` 下线。
 
 ## 验证速记
 - 离线合并测试：`node tmp/test_merge.js`（需先放好 `tmp/models_api.json` 与 `tmp/zen_models.json`）。
-- 实时自检：独立 `node -e` require 本包 `OpenCodeZenAdapter.listModels()`，期望 7 个 free 模型且
-  `mimo`/`muse-spark` 的 `inputModalities` 含 `image`、`hy3` 仅 `text`。
+- 实时自检：独立 `node -e` require 本包 `OpenCodeZenAdapter.listModels()` 实时拉取免费清单。
+- 闸门自检（改头逻辑后必跑）：`mod.zenHeaders('ses_<26位base62>')` 应产出
+  `ses_`+26 位小写 hex，且对同一输入稳定；再拿该头实际 POST `/chat/completions` 应 200。

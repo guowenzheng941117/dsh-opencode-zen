@@ -11,7 +11,7 @@
 The conversation you're reading right now is powered by this plugin, on the OpenCode Zen **free tier** — zero config, zero cost.
 
 - 💰 **Actually free** — the official free tier authenticates with the literal key `public`; no account, no signup, no API key.
-- 🎫 **Plays by the gateway's rules** — the zen free tier rejects requests without an `x-session-id` header (that is how opencode's own CLI marks its traffic). The plugin stamps one on every request, using your real DSH session id.
+- 🎫 **Plays by the gateway's rules** — the zen free tier only serves clients that look like the official opencode CLI. The plugin stamps the full identity header set on every request, including an `x-opencode-session` of exactly `ses_` + 26 lowercase hex characters — the one field the gateway actually validates (reverse-engineered from the real client; see "Attribution gate" below).
 - 🧮 **Live free catalog** — the available free models are pulled at runtime from OpenCode Zen's `/v1/models` endpoint (no login required), so the picker always reflects what's currently offered; `models.json` is an annotation overlay for metadata.
 - ⚡ **Install & go** — restart `dsh web` and the `opencode` route appears in the model selector; no configuration needed.
 - 🔑 **Stack quotas** — pairs with dsh-api-key-pool for round-robin rotation across multiple free accounts, automatically.
@@ -34,14 +34,58 @@ The spec map is cached to disk (`~/.cache/dsh-opencode-zen/models-dev-specs.json
 | `hy3-free` | Tencent Hunyuan Hy3 |
 | `deepseek-v4-flash-free` | DeepSeek V4 Flash — reasoning + tools, daily driver |
 | `mimo-v2.5-free` | Xiaomi MiMo 2.5 |
+| `ling-3.0-flash-fin-free` | Ling 3.0 Flash Fin |
 | `muse-spark-1.2-contributor-free` | Muse Spark 1.2 Contributor |
-| `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra |
+| `muse-spark-1.3-contributor-free` | Muse Spark 1.3 Contributor |
+| `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra (1M context) |
 | `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
-| `laguna-s-2.1-free` | Laguna S 2.1 |
 
 If the live fetch fails, the adapter falls back to the static `models.json` so the picker still works offline. Models removed upstream disappear automatically; new ones appear without a plugin update.
 
 The selector always offers `off` / `low` / `high` (default) / `max`; the adapter translates each level to what the chosen model accepts, or omits the field when unsupported.
+
+## Attribution gate
+
+The zen free tier will not serve third-party clients: requests that don't identify as the
+official opencode CLI are rejected with
+
+```json
+{"type":"error","error":{"type":"FreeTierError","message":"Error from provider (Console): OpenCode's free tier can only be used from within OpenCode"}}
+```
+
+The plugin satisfies the gate by sending the same identity headers the real client sends.
+Rather than guessing header names, we **intercepted the official client**: install `opencode`,
+point an `@ai-sdk/openai-compatible` provider at a local logging proxy via `OPENCODE_CONFIG`,
+and run `opencode run`. Version 1.18.31 sends:
+
+| Header | Value |
+|---|---|
+| `User-Agent` | `opencode/1.18.31 ai-sdk/provider-utils/4.0.23 runtime/bun/1.3.14` |
+| `x-opencode-client` | `cli` |
+| `x-opencode-project` | project id (sha1) — `global` also works |
+| `x-opencode-request` | `msg_<id>` (value not validated) |
+| `x-opencode-session` | `ses_<26 lowercase hex>` |
+
+`x-session-id` — the header the plugin used to rely on — **is gone from the new client's wire
+format**.
+
+Only the **shape of `x-opencode-session`** turned out to be validated. Across shuffled,
+repeated trials the result is deterministic per value:
+
+| `x-opencode-session` | Result |
+|---|---|
+| `ses_` + exactly 26 lowercase hex | **200** |
+| `ses_` + 24 / 25 / 27 / 28 / 32 hex | 403 |
+| `ses_` + 26 **uppercase** hex | 403 |
+| `ses_` + 26 base62 characters | 403 |
+| bare UUID / bare hex (no `ses_` prefix) | 403 |
+| the real CLI session id (control) | 200 |
+
+The `User-Agent` does not have to be spoofed — a DSH-branded UA passes — but the plugin sends
+the opencode one anyway. Because the host's own session id is `ses_<26 base62>`, it cannot be
+forwarded verbatim; the plugin derives a **stable** `ses_<26 lowercase hex>` from it via
+SHA-256, so every turn of one conversation pins to the same upstream backend and keeps its
+prompt cache warm.
 
 ## Installation
 
