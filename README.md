@@ -31,6 +31,8 @@ The spec map is cached to disk (`~/.cache/dsh-opencode-zen/models-dev-specs.json
 
 | Model | Notes |
 |---|---|
+| `union-alpha` | Union Alpha — stealth coding model; **Anthropic `/v1/messages` protocol**, tool use + vision |
+| `big-pickle` | Big Pickle |
 | `deepseek-v4-flash-free` | DeepSeek V4 Flash — reasoning + tools, daily driver |
 | `mimo-v2.5-free` | Xiaomi MiMo 2.5 |
 | `ling-3.0-flash-fin-free` | Ling 3.0 Flash Fin |
@@ -39,14 +41,38 @@ The spec map is cached to disk (`~/.cache/dsh-opencode-zen/models-dev-specs.json
 | `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra (1M context) |
 | `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
 
-As of 2026-09-17 the free set is down to these seven — `hy3-free` and
-`laguna-s-2.1-free` are no longer served by zen. Because membership is live, that
-table is illustrative, not authoritative: the picker is driven by
-`/v1/models`, so promotions and retirements show up on their own.
+Membership is not always signalled by the name: `union-alpha` and `big-pickle` carry no
+`free` suffix, so the adapter also accepts any model that models.dev declares at zero cost
+(`cost.input`/`cost.output` both 0). `hy3-free` and `laguna-s-2.1-free` are no longer served
+by zen. Because membership is live, this table is illustrative rather than
+authoritative: the picker is driven by `/v1/models`, so promotions and retirements show
+up on their own.
 
 If the live fetch fails, the adapter falls back to the static `models.json` so the picker still works offline. Models removed upstream disappear automatically; new ones appear without a plugin update.
 
 The selector always offers `off` / `low` / `high` (default) / `max`; the adapter translates each level to what the chosen model accepts, or omits the field when unsupported.
+
+## Two wire protocols
+
+Most zen models speak the OpenAI-compatible `chat/completions` API, but some only speak
+Anthropic's `Messages` API — `union-alpha` returns `500 Internal server error` on
+`/chat/completions` and works only on `/v1/messages`. The adapter picks the wire protocol per
+model (`ANTHROPIC_PROTOCOL_MODELS`) and translates accordingly:
+
+| Concern | OpenAI path | Anthropic path |
+|---|---|---|
+| Endpoint | `/chat/completions` | `/v1/messages` |
+| System prompt | a `system` message | top-level `system` field |
+| Tool schema | `function.parameters` | `input_schema` |
+| Tool call | `assistant.tool_calls` | `tool_use` content block |
+| Tool result | `role: "tool"` message | `tool_result` block in a user message |
+| Streaming | `choices[].delta` | `content_block_delta` events |
+| Completion | `[DONE]` / `finish_reason` | `message_stop` / `stop_reason` |
+
+Both paths feed the same block/usage/finish event contract and share the whole
+cut-stream recovery machinery, so the auto-continue, empty-stream retry and
+truncated-tool-argument quarantine behave identically. One asymmetry: Anthropic thinking
+blocks require a `signature`, so historical reasoning is **not** replayed on that path.
 
 ## Attribution gate
 

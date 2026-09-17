@@ -40,16 +40,31 @@
 
 ## 项目要点（Project notes）
 - 本插件把 **OpenCode Zen 免费模型**接入 DSH 模型选择器，走 **双源实时拉取**（不写死 `models.json`）：
-  - **可用性** = `https://opencode.ai/zen/v1/models`（zen 当前实际在服务的 free 模型，免登录 200）
+  - **可用性** = `https://opencode.ai/zen/v1/models`（zen 当前实际在服务的模型，免登录 200）
   - **规格** = `https://models.dev/api.json`（opencode 自身用的全量注册表：上下文窗口 / 输入模态 /
     推理档位 `reasoning_options` / 工具调用 `tool_call` 等完整参数）
   - 规格地图缓存到 `~/.cache/dsh-opencode-zen/models-dev-specs.json`（TTL `DSH_ZEN_MODELS_TTL_MS` 默认 10min），
-    避免启动卡在 ~4MB 慢拉取。
+    避免启动卡在 ~4MB 慢拉取。**缓存带 `SPEC_CACHE_VERSION`**：改动成员筛选逻辑时必须递增，
+    否则旧缓存会让新纳入的模型继续缺席（升级后"没生效"的经典坑）。
   - 兜底链：zen 可用性 → models.dev 目录 → 静态 `models.json`。
+- **免费成员判定不能只看 `-free` 后缀**：`union-alpha`（2026-09-16 上线的隐身模型）与
+  `big-pickle` 的 id 都**不带** free，但 models.dev 里 `cost` 全 0，确为免费档。
+  故 `isFreeModelId()` 顺序为：显式名单 → `/free/i` → models.dev 零成本。
+  只认后缀会让这类新免费模型从选择器里静默消失。
+- **两套 wire 协议**：多数模型走 OpenAI 兼容 `/chat/completions`；`union-alpha` 只认
+  Anthropic `/v1/messages`（打 `/chat/completions` 返回 `500 Internal server error`）。
+  - 由 `ANTHROPIC_PROTOCOL_MODELS` 声明，`wireProtocolOf()` 判定；`normalizeEntry` 把
+    `wireProtocol` 带进模型条目。
+  - 差异：system 顶层字段 / 工具 `input_schema` / 工具结果回成 user 的 `tool_result` 块 /
+    流事件是 `content_block_delta` / 结束标记 `message_stop`·`stop_reason` / temperature 上限 1。
+  - `AnthropicStreamTranslator` 与 `StreamTranslator` **接口完全一致**
+    （feed/pump/finalize/openedBlocks/continuable/toolBlocks/sawFinishReason/snapshotPartial/
+    quarantinePartialTools），故 `stream()` 的断流续跑恢复机制两条线共用。
+  - **Anthropic 线不回放 reasoning**：thinking 块需 `signature`，回放会被上游拒。
 - **视觉（image）以 `models.dev` 的 `modalities.input` 为准**：已核实 `hy3-free` **无**视觉、
-  `mimo-v2.5-free` **有**视觉（与 models.dev 一致）；旧的 blanket revert 已过时。
+  `mimo-v2.5-free` / `union-alpha` **有**视觉（与 models.dev 一致）；旧的 blanket revert 已过时。
   `models.json` 仍可显式写 `input: ["text","image"]` 覆盖。
-- 成员真相 = zen 实时 free id；`models.json` 现在只是**注释/兜底层**（name/上下文/推理档/数据风险）。
+- 成员真相 = zen 实时可用 id ∩ 免费判定；`models.json` 只是**注释/兜底层**（name/上下文/推理档/数据风险）。
 - 改 `lib/index.js` 后 `dev_reload_package` 只重建 fiber、**不重读磁盘**，需**整进程重启 `dsh web`**：
   用 detached `setsid` 包装器 `kill` 旧进程后自启，并 `curl` 自检 3080 端口。
 - 鉴权：zen 用字面量 key `public`，`Authorization: Bearer public`；`OPENCODE_BASE=https://opencode.ai/zen/v1`。
@@ -82,7 +97,10 @@
   `laguna-s-2.1-free` 已从 zen `/models` 下线。
 
 ## 验证速记
-- 离线合并测试：`node tmp/test_merge.js`（需先放好 `tmp/models_api.json` 与 `tmp/zen_models.json`）。
 - 实时自检：独立 `node -e` require 本包 `OpenCodeZenAdapter.listModels()` 实时拉取免费清单。
 - 闸门自检（改头逻辑后必跑）：`mod.zenHeaders('ses_<26位base62>')` 应产出
   `ses_`+26 位小写 hex，且对同一输入稳定；再拿该头实际 POST `/chat/completions` 应 200。
+- 双协议自检：`node -e` 用适配器 `stream()` 分别跑 `union-alpha`（Anthropic 线，
+  应产出 text/tool-call 块）与 `nemotron-3.5-lightning-free`（OpenAI 线）——
+  改协议相关代码后两条线都要过。
+- 网关有 ~60s 级限流：密集自检脚本要在请求间 `sleep 6~12s`，否则表现为超时而非 403。

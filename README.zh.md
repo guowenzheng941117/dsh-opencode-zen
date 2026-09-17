@@ -31,6 +31,8 @@
 
 | 模型 | 备注 |
 |---|---|
+| `union-alpha` | Union Alpha · 隐身编程模型；走 **Anthropic `/v1/messages` 协议**，支持工具调用与视觉 |
+| `big-pickle` | Big Pickle |
 | `deepseek-v4-flash-free` | DeepSeek V4 Flash · 推理 + 工具调用，日常主力 |
 | `mimo-v2.5-free` | 小米 MiMo 2.5 |
 | `ling-3.0-flash-fin-free` | 蚂蚁 Ling 3.0 Flash Fin |
@@ -39,13 +41,35 @@
 | `nemotron-3-ultra-free` | NVIDIA Nemotron 3 Ultra（1M 上下文） |
 | `nemotron-3.5-lightning-free` | NVIDIA Nemotron 3.5 Lightning |
 
-截至 2026-09-17，免费档只剩这 7 个 —— `hy3-free` 与 `laguna-s-2.1-free` 已从 zen 下线。
+成员身份不一定写在名字里：`union-alpha` 与 `big-pickle` 都不带 `free` 后缀，
+因此插件也会接纳 models.dev 声明为零成本（`cost.input`/`cost.output` 均为 0）的模型。
+`hy3-free` 与 `laguna-s-2.1-free` 已从 zen 下线。
 由于成员是实时拉取的，该表仅作示意、非权威：选择器由 `/v1/models` 驱动，
 上架/下架会自行反映。
 
 若实时拉取失败，插件回退到静态 `models.json`，选择器仍可离线工作。上游下架的模型自动消失，新上的模型无需更新插件即可出现。
 
 选择器统一提供 `off` / `low` / `high`（默认）/ `max` 四档；插件按各模型能力翻译后发送，不支持的档位自动收敛或不发该字段。
+
+## 两套 wire 协议
+
+多数 zen 模型走 OpenAI 兼容的 `chat/completions`，但个别模型只认 Anthropic 的
+Messages API —— `union-alpha` 打 `/chat/completions` 会 `500 Internal server error`，
+只有 `/v1/messages` 能用。插件按模型选择协议（`ANTHROPIC_PROTOCOL_MODELS`）并做相应翻译：
+
+| 关注点 | OpenAI 线 | Anthropic 线 |
+|---|---|---|
+| 端点 | `/chat/completions` | `/v1/messages` |
+| 系统提示 | `system` 消息 | 顶层 `system` 字段 |
+| 工具 schema | `function.parameters` | `input_schema` |
+| 工具调用 | `assistant.tool_calls` | `tool_use` 内容块 |
+| 工具结果 | `role: "tool"` 消息 | user 消息里的 `tool_result` 块 |
+| 流式 | `choices[].delta` | `content_block_delta` 事件 |
+| 结束 | `[DONE]` / `finish_reason` | `message_stop` / `stop_reason` |
+
+两条线产出同一套 block/usage/finish 事件，并共用整套断流恢复机制，
+因此自动续跑、空流重试、残缺工具参数隔离的行为完全一致。
+唯一差异：Anthropic 的 thinking 块需要 `signature`，所以该线**不回放**历史推理内容。
 
 ## 归属闸门
 
