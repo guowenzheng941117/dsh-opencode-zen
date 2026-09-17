@@ -87,6 +87,30 @@ OpenAI path keeps `image_url` + `/chat/completions`. Previously that side-channe
 hardcoded the OpenAI shape, so an Anthropic-only model like `union-alpha` failed every
 image with a 500 — even though the model itself sees images natively.
 
+## Native image pass-through
+
+By default images never enter the main request; they are converted to a text description
+first. For models whose native vision is reliable, sending the pixels directly is strictly
+better: one less round-trip, and color/detail/layout preserved exactly. Such models are
+declared in `NATIVE_IMAGE_MODELS` (or per-model `nativeImage` in `models.json`), currently
+`union-alpha`. Both wire formats support it: Anthropic sends an `image`/`source.base64`
+block, OpenAI an `image_url` block.
+
+**It applies to user messages only.** Empirically, an image nested in a tool result
+(`tool_result` / `role:"tool"`) is not attended to even when the format is valid and the
+gateway returns 200 — the model replies that it "can't visually inspect that base64
+payload", asks for the image to be attached directly, and gets every quadrant wrong. The
+very same image sent as a user message is read perfectly. So images inside tool results
+**always take the text side-channel**.
+
+Measured on a random four-quadrant image (bottom-left truth `246,252,90`):
+
+| Path | Answer |
+|---|---|
+| user image, native | `245,240,60` ✅ |
+| tool-result image, side-channel | `249,244,89` ✅ |
+| tool-result image, native attempt | refused / wrong ❌ |
+
 ## Attribution gate
 
 The zen free tier will not serve third-party clients: requests that don't identify as the

@@ -13,6 +13,7 @@
       "contextWindow": 262144,
       "description": "OpenCode Zen 免费档：隐身模型（2026-09-16 上线），面向 agentic coding，支持工具调用与视觉；走 Anthropic /v1/messages 协议，cost 全 0 但 id 不带 free 后缀",
       "maxTokens": 131072,
+      "nativeImage": true,
       "input": [
         "text",
         "image"

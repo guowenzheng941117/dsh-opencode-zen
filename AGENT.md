@@ -74,6 +74,15 @@
   - `openStreamOnce` 的 idle-watch 代理（`Object.create(response)`）会丢 undici 私有槽位，
     非流式请求会使 `response.json()` 抛 "Cannot read private member #state"；
     故非流式走 `options.nonStreaming` 跳过该包装。
+- **原生收图（用户图直传）**：`NATIVE_IMAGE_MODELS`（+ `models.json` 的 `nativeImage`
+  可覆盖）声明的模型，其**用户消息**里的图以原生 image 块直传主请求，不再转文字
+  （`nativeImageParts()`；Anthropic 发 `image`+`source.base64`，OpenAI 发 `image_url`）。
+  取字节仍走同一个 `loadImage`，故预算/缩放/编码与旁路一致。目前仅 `union-alpha`。
+  - **红线：工具结果里的图绝不直传。** 实测把图块塞进 `tool_result.content` /
+    `role:"tool"`，上游虽 200，但模型明确说看不到像素（"can't visually inspect that
+    base64 payload"）并要求直接附图，四象限颜色全错；同一张图作为用户消息直传则全中。
+    故工具结果图一律走文字旁路——这与"原生支持视觉"无关，是模型对工具输出内图的处理限制。
+  - 判定随模型走：`usesNativeImage()` 先看模型条目的 `nativeImage`，再退回内置名单。
 - **视觉（image）以 `models.dev` 的 `modalities.input` 为准**：已核实 `hy3-free` **无**视觉、
   `mimo-v2.5-free` / `union-alpha` **有**视觉（与 models.dev 一致）；旧的 blanket revert 已过时。
   `models.json` 仍可显式写 `input: ["text","image"]` 覆盖。

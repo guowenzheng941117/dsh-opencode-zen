@@ -82,6 +82,26 @@ Messages API —— `union-alpha` 打 `/chat/completions` 会 `500 Internal serv
 `image_url`+`/chat/completions`。此前该旁路把 OpenAI 形态写死，导致只认 Anthropic
 的模型（`union-alpha`）整条识图链 500 —— 而它**本身是能原生识图的**。
 
+## 原生收图（用户图直传）
+
+默认架构是"图不入主请求"，先把图转成文字描述。但对**原生视觉可靠**的模型，
+直传像素严格更优：省一次往返，颜色/细节/版式精确保留。这类模型由
+`NATIVE_IMAGE_MODELS`（或 `models.json` 的 `nativeImage`）声明，目前为 `union-alpha`。
+两条线都支持：Anthropic 直传 `image`+`source.base64` 块，OpenAI 直传 `image_url` 块。
+
+**但仅限用户消息里的图**。实测发现工具结果（`tool_result` / `role:"tool"`）里的图
+即使格式完全合法、上游也返回 200，模型仍**看不到像素**：明确回答
+"can't visually inspect that base64 payload"、要求"直接附图"，四象限颜色全错；
+而同一张图作为用户消息直传则四象限全中。故工具结果里的图**一律仍走文字旁路**。
+
+实测对照（随机四象限色图，左下真实 `246,252,90`）：
+
+| 路径 | 回答 |
+|---|---|
+| 用户图直传 | `245,240,60` ✅ |
+| 工具结果图（旁路） | `249,244,89` ✅ |
+| 工具结果图（尝试直传） | 拒答/答错 ❌ |
+
 ## 归属闸门
 
 zen 免费档不服务第三方客户端：请求若不像官方 opencode CLI 发出的，一律被拒：
