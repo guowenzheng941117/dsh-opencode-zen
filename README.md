@@ -71,8 +71,21 @@ model (`ANTHROPIC_PROTOCOL_MODELS`) and translates accordingly:
 
 Both paths feed the same block/usage/finish event contract and share the whole
 cut-stream recovery machinery, so the auto-continue, empty-stream retry and
-truncated-tool-argument quarantine behave identically. One asymmetry: Anthropic thinking
-blocks require a `signature`, so historical reasoning is **not** replayed on that path.
+truncated-tool-argument quarantine behave identically. Two asymmetries:
+
+- Anthropic thinking blocks require a `signature`, so historical reasoning is **not**
+  replayed on that path.
+- On that path a long generation can end as HTTP 200 with a **completely empty body**
+  (after ~32s), while the same request with `stream:false` returns the full result
+  reliably. So instead of retrying the stream, that path **falls back to a
+  non-streaming request**. This is what previously made `union-alpha` fail long answers
+  with "stream ended without any data".
+
+The **vision side-channel is protocol-aware too**: `describeRequest()` emits an
+`image`/`source.base64` content block to `/v1/messages` for Anthropic models, while the
+OpenAI path keeps `image_url` + `/chat/completions`. Previously that side-channel
+hardcoded the OpenAI shape, so an Anthropic-only model like `union-alpha` failed every
+image with a 500 — even though the model itself sees images natively.
 
 ## Attribution gate
 

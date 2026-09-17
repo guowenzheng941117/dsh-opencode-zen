@@ -69,7 +69,18 @@ Messages API —— `union-alpha` 打 `/chat/completions` 会 `500 Internal serv
 
 两条线产出同一套 block/usage/finish 事件，并共用整套断流恢复机制，
 因此自动续跑、空流重试、残缺工具参数隔离的行为完全一致。
-唯一差异：Anthropic 的 thinking 块需要 `signature`，所以该线**不回放**历史推理内容。
+两处差异：
+
+- Anthropic 的 thinking 块需要 `signature`，所以该线**不回放**历史推理内容。
+- **该线长生成时流式会返回 HTTP 200 但 body 全空**（约 32 秒后），而同一请求改成
+  `stream:false` 能稳定取回完整结果。故该线遇到空流不再重试流式，而是**直接退回
+  非流式**取回答案，避免整轮失败（这正是 `union-alpha` 曾在长回答上
+  报 "stream ended without any data" 的原因）。
+
+**视觉旁路同样按协议走**：`describeRequest()` 会为 Anthropic 线产出
+`image`+`source.base64` 内容块并打 `/v1/messages`，OpenAI 线仍用
+`image_url`+`/chat/completions`。此前该旁路把 OpenAI 形态写死，导致只认 Anthropic
+的模型（`union-alpha`）整条识图链 500 —— 而它**本身是能原生识图的**。
 
 ## 归属闸门
 

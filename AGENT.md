@@ -61,6 +61,19 @@
     （feed/pump/finalize/openedBlocks/continuable/toolBlocks/sawFinishReason/snapshotPartial/
     quarantinePartialTools），故 `stream()` 的断流续跑恢复机制两条线共用。
   - **Anthropic 线不回放 reasoning**：thinking 块需 `signature`，回放会被上游拒。
+  - **Anthropic 线长生成流式恒返回空 body**（HTTP 200 + 0 字节，约 32s 后），
+    同一请求 `stream:false` 却能稳定取回——这不是"断流"，是网关对该线的流式缺陷。
+    故该线空流时**直接退回非流式**（`fetchOnceNonStreaming` +
+    `anthropicMessageToEvents`），不再重试流式。此即 union-alpha 长回答报
+    "stream ended without any data" 的根因。
+  - **视觉旁路也必须按协议走**：`describeRequest()` 统一产出端点与请求体
+    （Anthropic 用 `image`+`source.base64` 打 `/v1/messages`；OpenAI 用
+    `image_url` 打 `/chat/completions`），`extractDescribeText()` 兼容两种响应形态。
+    旧实现把 OpenAI 形态写死，导致 union-alpha 识图整条链 500——**该模型本身能原生识图**，
+    实测喂纯色图能正确答出颜色；改协议后 `visionDescribe` 正常返回描述。
+  - `openStreamOnce` 的 idle-watch 代理（`Object.create(response)`）会丢 undici 私有槽位，
+    非流式请求会使 `response.json()` 抛 "Cannot read private member #state"；
+    故非流式走 `options.nonStreaming` 跳过该包装。
 - **视觉（image）以 `models.dev` 的 `modalities.input` 为准**：已核实 `hy3-free` **无**视觉、
   `mimo-v2.5-free` / `union-alpha` **有**视觉（与 models.dev 一致）；旧的 blanket revert 已过时。
   `models.json` 仍可显式写 `input: ["text","image"]` 覆盖。
