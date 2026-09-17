@@ -68,12 +68,36 @@
     "stream ended without any data" 的根因。
   - **超时预算必须按请求形态分档（2026-09-17 实测，曾致长回答整轮失败）**：
     非流式请求下网关会**把整段生成缓冲完才发响应头**——实测长回答的 headers 与
-    body 同在 27.5s 到达，即 `fetch()` resolve 时刻 ≈ 整段生成耗时，而非首字节
+    body 同在 **175.8s** 到达，即 `fetch()` resolve 时刻 ≈ 整段生成耗时，而非首字节
     时间。若非流式沿用 `CONNECT_TIMEOUT_MS`(45s)，**任何超过 45s 的正常长回答
-    都会被误判为 "connect timeout"**。故新增 `NONSTREAM_TIMEOUT_MS`(240s)，
-    `openStreamOnce` 里按 `options.nonStreaming` 二选一。
-    实测修复后：短回答 56.4s、长回答 81.3s（2045 字）均完整取回——两者都 >45s，
-    修复前必失败。**改超时相关代码时勿把两档合并。**
+    都会被误判为 "connect timeout"**。
+  - **非流式预算由吞吐反推，不是拍固定值**：实测吞吐 ≈ **23.1 tok/s**
+    （union-alpha，4062 tok / 175.8s）。`nonstreamTimeoutMs(max_tokens)` 用保守
+    下界 `NONSTREAM_FLOOR_TPS=10` × 安全系数 1.5 反推，夹在
+    `[NONSTREAM_TIMEOUT_MIN_MS(60s), NONSTREAM_TIMEOUT_MAX_MS]`。
+    **注意 union-alpha 满额 max_tokens=131072 按实测吞吐需 ≈ 95 分钟**——不能真等：
+    会把 UI 冻住数小时，且挂死连接陪跑同样时长。默认硬上限 **10 分钟**，可用
+    `DSH_ZEN_NONSTREAM_TIMEOUT_MS` 调整：正整数=毫秒；`0`/`unlimited`/`infinity`/
+    `none` = 不主动超时（只等宿主 signal 取消），受 `MAX_TIMER_DELAY_MS`
+    (2147483647ms≈24.8 天) 保护。**改超时相关代码时勿把两档合并，也不要把上限
+    改成无条件的无限。**
+  - **宿主两侧都没有请求级超时**：`@deepseek-ai/dsh-llm` 不设请求级 timeout，
+    只把取消权经 `signal` 交给适配器；`idleWatchdog` 仅被**内置** deepseek/pi-ai
+    适配器使用，**不套在第三方适配器输出上**。故墙钟上限完全由本插件自己决定——
+    「能不能一直等」是本插件自己的策略问题，不是宿主限制。
+  - **流式空 body 是偶发、不是必现**（3 轮采样：OK 1 / EMPTY 1 / 限流 4）。
+    故**必须保留非流式兜底**：不能因为"流式看起来不行"就改成一律非流式，
+    也不能删掉非流式兜底。两条路都要活。
+  - **流式 idle 看门狗已对齐官方（30s → 300s）**：该阈值语义是"死连接检测"，
+    不是"生成时长上限"。长思考期间上游可能长时间不发字节（实测流式 headers 到
+    首个 chunk 之间、以及 chunk 之间都可能长静默），30s 比官方内置
+    `dsh-llm-deepseek` 的 300s 严 10 倍，会把正常长回答误杀。故默认 300s，
+    `DSH_ZEN_STREAM_IDLE_TIMEOUT_MS` 可覆盖（`0`=关闭看门狗）。
+  - **流式路径无总时长上限**：`connectTimer` 在 `fetch()` 返回（响应头到达）后即
+    清除，泵送阶段只受 idle 看门狗约束。故"能等多久"在流式上由"静默多久"决定，
+    而非总时长——这是比非流式更健康的模型。
+  - **实测修复后**（真实适配器端到端）：短回答 56.4s、长回答 81.3s（2045 字）、
+    非流式 175.8s（4062 tok / 5798 字）均完整取回，全部 >45s。
   - **视觉旁路也必须按协议走**：`describeRequest()` 统一产出端点与请求体
     （Anthropic 用 `image`+`source.base64` 打 `/v1/messages`；OpenAI 用
     `image_url` 打 `/chat/completions`），`extractDescribeText()` 兼容两种响应形态。

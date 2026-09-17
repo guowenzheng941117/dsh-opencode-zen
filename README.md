@@ -183,6 +183,21 @@ Set `OPENCODE_ZEN_API_KEY` or `OPENCODE_GO_API_KEY` before starting `dsh web`.
 
 Nothing configured? It falls back to the official public tier (`public`).
 
+Other optional variables (all have sensible defaults):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `DSH_ZEN_MODELS_TTL_MS` | `600000` (10 min) | Live catalog refresh TTL |
+| `DSH_ZEN_STREAM_IDLE_TIMEOUT_MS` | `300000` (5 min) | Streaming "dead connection" threshold: how long with **zero bytes** before aborting. `0` disables the watchdog |
+| `DSH_ZEN_NONSTREAM_TIMEOUT_MS` | `600000` (10 min) | Non-streaming wall-clock cap. Positive integer = ms; `0` / `unlimited` / `infinity` / `none` = **never time out** (cancel manually) |
+
+**How long can a request wait?** When a model enters a long "deep thinking" stretch:
+
+- **The streaming path has no total-duration cap** — only an idle/silence cap (the watchdog above). As long as upstream keeps emitting bytes, it can run as long as it needs. This is the healthy model.
+- **The non-streaming path is a black box** — the gateway buffers the entire generation before sending response headers, so the client gets no progress signal and cannot tell "model is thinking hard" from "connection is dead". Only time can estimate it. Measured union-alpha throughput is ≈ **23 tok/s**; we derive the budget from a conservative 10 tok/s floor and apply a hard cap.
+- **Does it wait forever?** Not by default. A full 131072-token reply would take ≈95 minutes at measured throughput — waiting that long would freeze the UI for hours, and a hung connection would burn the same time. So the default cap is 10 minutes; on timeout it fails loudly and you decide whether to retry (you can also cancel at any time).
+- **Want to wait indefinitely?** Set `DSH_ZEN_NONSTREAM_TIMEOUT_MS=unlimited`. The tradeoff: a dead connection then hangs until you cancel it manually.
+
 ### Annotate the model list (optional)
 
 Free models are discovered live from the API, so you normally don't edit anything. `models.json` at the repo root is an **annotation overlay** keyed by model id — it supplies metadata the `/v1/models` list doesn't return (name, context window, reasoning efforts, image input, data risk). It accepts `{ "models": [...] }` or a bare array; every entry needs at least a string `id`:
